@@ -31,9 +31,10 @@ public class Get_Pnr_frag extends Fragment {
 
     EditText pnr,train_number;
     Button pnr_submit;
-    String pnr_string,train_string;
+    String pnr_string,train_string,pnr_no;
     private String user_data;
     TextView tv;
+
     StringBuilder stringBuilder=new StringBuilder();
      View RootView;
     SharedPreferences sp;
@@ -55,23 +56,34 @@ public class Get_Pnr_frag extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         pnr=(EditText) RootView.findViewById(R.id.pnr_text);
+
         // train_number=(EditText)findViewById(R.id.train_text);
         pnr_submit=(Button)RootView.findViewById(R.id.pnr_submit);
         sp=getActivity().getSharedPreferences("login",Context.MODE_PRIVATE);
 
         //if SharedPreferences contains username and password then directly redirect to Home activity
         if(sp.contains("pnr")){
-          sp.getString("pnr","empty").toString();
+
+          pnr_no=sp.getString("pnr","empty");
+            System.out.println("Shared pref Contains Pnr"+pnr_no);
+            new Backgroundtask_pnr().execute();
                     }
-        tv=(TextView)RootView.findViewById(R.id.sr);
-                pnr_submit.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                get_pnr_data();
+        else{
 
-            }
-        });
+            tv=(TextView)RootView.findViewById(R.id.sr);
 
+            System.out.println("shared pref does not contain pnr");
+            pnr_submit.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    getpnr_no();
+                    System.out.println("pnr no "+pnr_no);
+                    get_pnr_data();
+
+
+                }
+            });
+        }
     }
     private void get_pnr_data(){
         if (!validate_pnr_number()) {
@@ -81,6 +93,9 @@ public class Get_Pnr_frag extends Fragment {
         saveinfo();
 
 
+    }
+    public void getpnr_no(){
+pnr_no=pnr.getText().toString();
     }
     private boolean validate_train_number() {
         if (train_number.getText().toString().trim().isEmpty()||(train_number.getText().length()!=5)) {
@@ -137,7 +152,18 @@ public class Get_Pnr_frag extends Fragment {
     public void saveinfo(){
         pnr_string=pnr.getText().toString();
         // train_string=train_number.getText().toString();
-        new Backgroundtask_pnr().execute();
+
+
+    }
+    public void set_shared_pref(){
+        SharedPreferences.Editor editor=getActivity().getSharedPreferences("login", Context.MODE_PRIVATE).edit();
+        editor.putString("pnr",pnr_no);
+        editor.apply();
+
+        SharedPreferences sp=getContext().getSharedPreferences("login",Context.MODE_PRIVATE);
+        String pass=sp.getString("pnr",null);
+        System.out.println("pass"+pass);
+                System.out.println("sp saved in "+pnr_no);
 
     }
     class Backgroundtask_pnr extends AsyncTask<Void,Void,String>
@@ -146,7 +172,9 @@ public class Get_Pnr_frag extends Fragment {
         String add_url;
         @Override
         protected void onPreExecute() {
-            add_url="http://api.railwayapi.com/v2/pnr-status/pnr/"+pnr.getText().toString()+"/apikey/9jj3hddb3m/";
+
+            add_url="http://api.railwayapi.com/v2/pnr-status/pnr/"+pnr_no+"/apikey/9jj3hddb3m/";
+            System.out.println("add url "+add_url);
         }
 
         @Override
@@ -206,19 +234,13 @@ public class Get_Pnr_frag extends Fragment {
                     int json_res=jsonObject.getInt("response_code");
                     System.out.println("json_response"+json_res);
                     if(json_res==200){
-
+                        set_shared_pref();
                         BlankFragment fragment = new BlankFragment();
                         Bundle bundle=new Bundle();
                         android.support.v4.app.FragmentTransaction fragmentTransaction = getActivity().getSupportFragmentManager().beginTransaction();
                         bundle.putString("string_json",result);
                         fragment.setArguments(bundle);
                         fragmentTransaction.replace(R.id.fragment_container, fragment).addToBackStack(null);
-                        sp=getActivity().getSharedPreferences("login", Context.MODE_PRIVATE);
-                        SharedPreferences.Editor e=sp.edit();
-                        e.putString("username", pnr.getText().toString());
-
-                        e.commit();
-
                         fragmentTransaction.commit();
                     }
                     else{
